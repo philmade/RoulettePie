@@ -10,7 +10,9 @@ def reset_strategy():
     "stake" : 2,
     "target" : 1.5, # defines when to stop playing should the bank * this amount is reached
     "stoploss" : 0.5, # defines the size of the bet (* bank) which should make the machine step away from the table.
-    "bet_increase" : 2, #defines how much to increase the stake should it lose - for ex bet_increase = 2 wil
+    "bet_increase_lose" : 2, #defines how much to increase the stake should it lose - for ex bet_increase = 2 wil
+    "bet_increase_win" : 2, # NEW - defines how much to increase the bet should it win - idea via reddit
+    "reset_stake" : 17, # NEW - defines how often the strategy should reset itself back to it's original strategy. If
 
 }
     return
@@ -29,7 +31,9 @@ def roulette():
     stake = strategy['stake']
     target = strategy['target']
     stoploss = strategy['stoploss']
-    bet_increase = strategy['bet_increase']
+    bet_increase_lose = strategy['bet_increase_lose']
+    bet_increase_win = strategy['bet_increase_win']
+    reset_stake = strategy['reset_stake']
 
     while bank >= stake and \
                     bank > 0 and \
@@ -45,7 +49,7 @@ def roulette():
         if result == 0 :
 
             #the house wins, so you must double your stake
-            stake *= bet_increase
+            stake *= bet_increase_lose
             strategy['bank'] = round(bank,0)
 
         elif result%2  == 0:
@@ -55,13 +59,20 @@ def roulette():
             # add my winnings and return the stake
             bank += (stake * 2)
 
-            # reset the stake because you won
-            stake = strategy["stake"]
+            # NEW! Increase the bet even if you won! This means we must randomly return stake some other way
+            stake *= bet_increase_win
             strategy['bank'] = round(bank,0)
+
+        # if the result is between the two numbers in the reset_strategy range, ie 0 and 9, then reset the stake.
+        # elif result == enumerate(strategy['reset_stake'],1):
+        elif 0 <= result <= reset_stake :
+            stake = strategy['stake']
+            # print("The result was {} resetting stake back to {}" .format(result,strategy['stake']))
+            
 
         else:
             #it must be an odd number, you LOST, therefore double your stake
-            stake *= bet_increase
+            stake *= bet_increase_lose
             strategy['bank'] = round(bank,0)
 
 def roulette_player():
@@ -72,15 +83,19 @@ def roulette_player():
     ."""
     
     def randomise_strategy():
-                strategy['stake'] = round(random.uniform(2,100),2)
+                strategy['stake'] = round(random.uniform(2,10),2)
                 strategy['target'] = round(random.uniform(1.1,10),2)
                 strategy['stoploss'] = round(random.uniform(0.2, 0.8),2)
-                strategy['bet_increase'] = round(random.uniform(2, 100),2)
+                strategy['bet_increase_lose'] = round(random.uniform(2, 100),2)
+                strategy['bet_increase_win'] = round(random.uniform(2,100),2)
+                strategy['reset_stake'] = round(random.uniform(0,36),0)
                 reset_bank()
 
     def test_further_a():
         iterations = 0
         test_a = []
+        # print("Testing to 100")
+        reset_bank()
 
         while iterations <= 100 and strategy['bank'] >= 0:
             
@@ -105,6 +120,9 @@ def roulette_player():
     def test_further_b():
         iterations = 0
         test_b = []
+        # print ("Testing to 1000")
+        reset_bank()
+
 
         while iterations <= 1000:
             
@@ -119,16 +137,16 @@ def roulette_player():
             if len(test_b) == 1000 and test_b[999] >= test_b[0]:
                  # print("IT WORKED for 1000 iterations! The bank started with {} and ended with {}" .format(test_b[0],test_b[999]))
                  # print("The strategy was {}" .format(strategy))
-                #print("Worked for 1000 iterations - test_B failed {} times before this" .format(fail_count))
+                 # print("Worked for 1000 iterations - test_B failed {} times before this" .format(fail_count))
                 test_further_c()
+
             elif len(test_b) == 1000 and test_b[999] <= test_b[0]:
-                #fail_count += 1
+                 # fail_count += 1
                 break
     
     def test_further_c():
         iterations = 0
         test_c=[]
-
         #print("Testing to 5,000")
         reset_bank()
 
@@ -156,20 +174,20 @@ def roulette_player():
         final_test = []
         final_test_results = []
 
-        print("The winning strategies were{}".format(test_c_wins))
+        # print("The winning strategies were{}".format(test_c_wins))
         for each_strategy in test_c_wins:
             
             strategy.update(test_c_wins[iterator])
             print("The new strategy is {}" .format(strategy))
             reset_bank()
 
-            while strategy['stake'] <= strategy['bank'] * strategy['stoploss']:
+            while len(final_test_results) <= 10000: #strategy['bank'] <= strategy['bank'] * strategy['target']:
                 roulette()
                 # print(strategy['bank'])
                 final_test_results.append(strategy['bank'])
 
             else:
-                print("The strategy worked over {} sets, starting with {} and ending with {}" .format(len(final_test_results),final_test_results[0],final_test_results[-1]))
+                print("The strategy starting with {} and ended with {}" .format(final_test_results[0],final_test_results[-1]))
                 print("At one time, there was {} in the bank" .format(max(final_test_results)))
                 final_test_results = []    
                 iterator += 1
